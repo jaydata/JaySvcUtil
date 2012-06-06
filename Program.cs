@@ -144,10 +144,10 @@ namespace JaySvcUtil
             }
         }
 
-        //http://schemas.microsoft.com/ado/2007/05/edm <-- i found this somewhere
+        //http://schemas.microsoft.com/ado/2007/05/edm <-- i found this somewhere --> sharepoint
         public static Dictionary<string, string> NamespaceVersions  = new Dictionary<string,string>
         {
-            {"http://schemas.microsoft.com/ado/2007/05/edm", "V1" },
+            {"http://schemas.microsoft.com/ado/2007/05/edm", "V11" },
             {"http://schemas.microsoft.com/ado/2006/04/edm", "V1" },
             {"http://schemas.microsoft.com/ado/2008/09/edm", "V2" },
             {"http://schemas.microsoft.com/ado/2009/11/edm", "V3" }
@@ -163,27 +163,37 @@ namespace JaySvcUtil
 
             
             Console.Write("Requesting: " + options.MetadataUri + "...");
-            
-            var r = new System.Net.WebClient();
-            var req = (HttpWebRequest)HttpWebRequest.Create(options.MetadataUri.Trim());
-            req.UserAgent = "JaySvcUtil.exe";
 
-            //req.Credentials = cred;
-            req.PreAuthenticate = true;
-            //req.Headers.Add("User-Agent: JaySvcUtil.exe");
-            if (!string.IsNullOrWhiteSpace(options.UserName))
+            MemoryStream documentStream = new MemoryStream();
+            if (options.MetadataUri.StartsWith("http"))
             {
-                req.Credentials = new NetworkCredential(options.UserName, options.Password, options.Domain);
+                var r = new System.Net.WebClient();
+                var req = (HttpWebRequest)HttpWebRequest.Create(options.MetadataUri.Trim());
+                req.UserAgent = "JaySvcUtil.exe";
+
+                //req.Credentials = cred;
+                req.PreAuthenticate = true;
+                //req.Headers.Add("User-Agent: JaySvcUtil.exe");
+                if (!string.IsNullOrWhiteSpace(options.UserName))
+                {
+                    req.Credentials = new NetworkCredential(options.UserName, options.Password, options.Domain);
+                }
+                else
+                {
+                    req.Credentials = CredentialCache.DefaultCredentials;
+                }
+                var res = req.GetResponse();
+                var resStream = res.GetResponseStream();
+                resStream.CopyTo(documentStream);
+                documentStream.Position = 0;
+                //resStream.Position = 0;
+                //r.Credentials = cc;
             }
             else
             {
-                req.Credentials = CredentialCache.DefaultCredentials;
+                File.OpenRead(options.MetadataUri).CopyTo(documentStream);
+                documentStream.Position = 0;
             }
-            var res = req.GetResponse();
-            var resStream = res.GetResponseStream();
-            //resStream.Position = 0;
-            //r.Credentials = cc;
-            
             //var metadata = r.DownloadString(options.MetadataUri.Trim());
             Console.WriteLine(" done.");
           //// Compile the style sheet.
@@ -191,11 +201,8 @@ namespace JaySvcUtil
             FileStream outputStream = new FileStream(options.OutputFileName, FileMode.Create);
             //MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(metadata));
             XmlDocument doc = new XmlDocument();
-            var myData = new MemoryStream();
-            resStream.CopyTo(myData);
-            myData.Position = 0;
-            doc.Load(myData);
-            myData.Position = 0;
+            doc.Load(documentStream);
+            documentStream.Position = 0;
             var dsNode = doc.SelectSingleNode("//*[local-name() = 'DataServices']");
             var schemaNode = doc.SelectSingleNode("//*[local-name() = 'Schema']");
 
@@ -228,11 +235,8 @@ namespace JaySvcUtil
             Console.WriteLine("OData version: " + options.ODataVersion);
             var xslArg = new XsltArgumentList();
             xslArg.AddExtensionObject("jay:stack",options);
-            var reader = XmlReader.Create(myData);
+            var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
-
-            //Console.ReadKey();
-            //var rr = "hello";
         }
 
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
