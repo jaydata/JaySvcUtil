@@ -1,5 +1,5 @@
 ﻿<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                xmlns:edm="http://schemas.microsoft.com/ado/2008/09/edm"
+                xmlns:edm="http://schemas.microsoft.com/ado/2009/11/edm"
                 xmlns:jay="jay:stack"
                 xmlns:annot="http://schemas.microsoft.com/ado/2009/02/edm/annotation"
     xmlns:msxsl="urn:schemas-microsoft-com:xslt" exclude-result-prefixes="msxsl">

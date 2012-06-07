@@ -55,8 +55,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="JayDataContextGenerator_OData_V1.xslt">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="JayDataContextGenerator_OData_v3.xslt">
+    <EmbeddedResource Include="JayDataContextGenerator_OData_V3.xslt">
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
@@ -64,6 +65,7 @@
   <ItemGroup>
     <EmbeddedResource Include="JayDataContextGenerator_OData_V11.xslt">
       <SubType>Designer</SubType>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
