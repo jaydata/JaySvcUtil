@@ -1,5 +1,6 @@
 ﻿<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:edm="http://schemas.microsoft.com/ado/2009/11/edm"
+                xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
                 xmlns:jay="jay:stack"
                 xmlns:annot="http://schemas.microsoft.com/ado/2009/02/edm/annotation"
     xmlns:msxsl="urn:schemas-microsoft-com:xslt" exclude-result-prefixes="msxsl">
@@ -75,11 +76,26 @@
     </xsl:template>
 
   <xsl:template match="edm:Key"></xsl:template>
-  
+
   <xsl:template match="edm:FunctionImport">
-    <xsl:value-of select="@Name"/>: function () { return this._generateServiceOperationQueryable('<xsl:value-of select="@Name"/>', '<xsl:value-of select="@EntitySet"/>', arguments<xsl:for-each select="edm:Parameter">
-      <xsl:if test="position() = 1">, [</xsl:if>'<xsl:value-of select="@Name"/>'<xsl:if test="position() = last()">]</xsl:if><xsl:if test="position() != last()">,</xsl:if>
-    </xsl:for-each>); }</xsl:template>
+    <xsl:value-of select="@Name"/>: $data.EntityContext.generateServiceOperation({ serviceName:'<xsl:value-of select="@Name"/>', returnType: <xsl:apply-templates select="." mode="render-return-config" />, <xsl:apply-templates select="." mode="render-elementType-config" />params: <xsl:for-each select="edm:Parameter">
+      <xsl:if test="position() = 1">[</xsl:if>{ <xsl:value-of select="@Name"/>: '<xsl:value-of select="@Type"/>' }<xsl:if test="position() = last()">]</xsl:if><xsl:if test="position() != last()">,</xsl:if>
+    </xsl:for-each>, method: '<xsl:value-of select="@m:HttpMethod"/>'})</xsl:template>
+
+  <xsl:template match="edm:FunctionImport" mode="render-return-config">
+    <xsl:choose>
+      <xsl:when test="not(@ReturnType)">null</xsl:when>
+      <xsl:when test="starts-with(@ReturnType, 'Collection')">$data.Queryable</xsl:when>
+      <xsl:otherwise>
+        '<xsl:value-of select="@ReturnType"/>'
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+  <xsl:template match="edm:FunctionImport" mode="render-elementType-config">
+    <xsl:if test="starts-with(@ReturnType, 'Collection')">
+      <xsl:variable name="len" select="string-length(@ReturnType)-12"/>elementType: '<xsl:value-of select="substring(@ReturnType,12,$len)"/>',
+    </xsl:if>
+  </xsl:template>
 
   <xsl:template match="edm:EntitySet">
     <xsl:value-of select="@Name"/>: { type: <xsl:value-of select="jay:GetEntitySetBaseClass()"  />, elementType: <xsl:value-of select="@EntityType"/> }</xsl:template>
