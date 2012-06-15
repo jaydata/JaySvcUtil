@@ -211,14 +211,6 @@ namespace JaySvcUtil
             if (string.IsNullOrWhiteSpace(options.ODataVersion))
             {
                 options.ODataVersion = NamespaceVersions[ns];
-                if (options.ODataVersion == "V2")
-                {
-                    var maxServiceVersion = dsNode.SelectSingleNode("@*[local-name() = 'MaxDataServiceVersion']");
-                    if (maxServiceVersion != null && maxServiceVersion.Value == "3.0")
-                    {
-                        options.ODataVersion = "V3";
-                    }
-                }
             }
            
 
