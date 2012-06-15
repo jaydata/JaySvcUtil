@@ -118,6 +118,10 @@
     <type>'<xsl:value-of select="."/>'</type>
   </xsl:template>
 
+  <xsl:template match="@ConcurrencyMode" mode="render-field">
+    <concurrencyMode>$data.ConcurrencyMode.<xsl:value-of select="."/></concurrencyMode>
+  </xsl:template>
+
   <xsl:template match="@Nullable" mode="render-field">
     <nullable><xsl:value-of select="."/></nullable>
     
