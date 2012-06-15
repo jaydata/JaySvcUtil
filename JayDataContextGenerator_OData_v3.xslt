@@ -127,7 +127,7 @@
     
     <xsl:if test=". = 'false'">
       <xsl:choose>
-        <xsl:when test="parent::edm:Property/@annot:StoreGeneratedPattern = 'Identity'"></xsl:when>
+        <xsl:when test="parent::edm:Property/@annot:StoreGeneratedPattern = 'Identity' or parent::edm:Property/@annot:StoreGeneratedPattern = 'Computed'"></xsl:when>
         <xsl:otherwise><required>true</required></xsl:otherwise>
       </xsl:choose>
     </xsl:if>
