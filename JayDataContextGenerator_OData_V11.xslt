@@ -79,9 +79,9 @@
   <xsl:template match="edm:Key"></xsl:template>
 
   <xsl:template match="edm:FunctionImport">
-    <xsl:value-of select="@Name"/>: $data.EntityContext.generateServiceOperation({ serviceName:'<xsl:value-of select="@Name"/>', returnType: <xsl:apply-templates select="." mode="render-return-config" />, <xsl:apply-templates select="." mode="render-elementType-config" />params: <xsl:for-each select="edm:Parameter">
-      <xsl:if test="position() = 1">[</xsl:if>{ <xsl:value-of select="@Name"/>: '<xsl:value-of select="@Type"/>' }<xsl:if test="position() = last()">]</xsl:if><xsl:if test="position() != last()">,</xsl:if>
-    </xsl:for-each>, method: '<xsl:value-of select="@m:HttpMethod"/>'})</xsl:template>
+    <xsl:value-of select="@Name"/>: $data.EntityContext.generateServiceOperation({ serviceName:'<xsl:value-of select="@Name"/>', returnType: <xsl:apply-templates select="." mode="render-return-config" />, <xsl:apply-templates select="." mode="render-elementType-config" />params: [<xsl:for-each select="edm:Parameter">
+      { <xsl:value-of select="@Name"/>: '<xsl:value-of select="@Type"/>' }<xsl:if test="position() != last()">,</xsl:if>
+    </xsl:for-each>], method: '<xsl:value-of select="@m:HttpMethod"/>'})</xsl:template>
 
   <xsl:template match="edm:FunctionImport" mode="render-return-config">
     <xsl:choose>
