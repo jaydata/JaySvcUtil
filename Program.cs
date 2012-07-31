@@ -150,6 +150,7 @@ namespace JaySvcUtil
             {"http://schemas.microsoft.com/ado/2007/05/edm", "V11" },
             {"http://schemas.microsoft.com/ado/2006/04/edm", "V1" },
             {"http://schemas.microsoft.com/ado/2008/09/edm", "V2" },
+            {"http://schemas.microsoft.com/ado/2009/08/edm", "V21" },
             {"http://schemas.microsoft.com/ado/2009/11/edm", "V3" }
         };
 
