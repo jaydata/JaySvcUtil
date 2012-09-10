@@ -227,7 +227,17 @@ namespace JaySvcUtil
 
             Console.WriteLine("OData version: " + options.ODataVersion);
             var xslArg = new XsltArgumentList();
-            xslArg.AddExtensionObject("jay:stack",options);
+            
+            xslArg.AddParam("SerivceUri", "", options.MetadataUri.Substring(0, options.MetadataUri.LastIndexOf("$metadata") - 1));
+            xslArg.AddParam("EntityBaseClass", "", options.EntityBaseClass);
+            xslArg.AddParam("ContextBaseClass", "", options.ContextBaseClass);
+            xslArg.AddParam("AutoCreateContext", "", options.AutoCreateContext);
+            xslArg.AddParam("ContextInstanceName", "", options.ContextInstanceName);
+            xslArg.AddParam("EntitySetBaseClass", "", options.EntitySetBaseClass);
+            xslArg.AddParam("CollectionBaseClass", "", options.CollectionBaseClass);
+            xslArg.AddParam("DefaultNamespace", "", "");
+            xslArg.AddParam("contextNamespace", "", options.ContextNamespace);
+
             var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
         }
