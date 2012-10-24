@@ -129,10 +129,16 @@ namespace JaySvcUtil
         private const string stylesheet = @"JayDataContextGenerator.xslt";
 
 
+        static IXPathNavigable GetXslt(string version) { 
+            return GetXslt(version, false);
+        }
 
-        static IXPathNavigable GetXslt(string version)
+        static IXPathNavigable GetXslt(string version, bool typeScript)
         {
             var filename = "JayDataContextGenerator_OData_" + version + ".xslt";
+            if(typeScript)
+                filename = "JayDataContextTypeScriptGenerator_OData_" + version + ".xslt";
+
             if (File.Exists(filename)) {
                 return new XPathDocument(File.OpenText(filename));
             } else {
@@ -218,7 +224,7 @@ namespace JaySvcUtil
             XslCompiledTransform xslt = new XslCompiledTransform(Debugger.IsAttached);
             if (Debugger.IsAttached)
             {
-                xslt.Load("JayDataContextGenerator_odata_" + options.ODataVersion + ".xslt");
+                xslt.Load("JayDataContextGenerator_OData_" + options.ODataVersion + ".xslt");
             }
             else
             {
@@ -227,8 +233,15 @@ namespace JaySvcUtil
 
             Console.WriteLine("OData version: " + options.ODataVersion);
             var xslArg = new XsltArgumentList();
-            
-            xslArg.AddParam("SerivceUri", "", options.MetadataUri.Substring(0, options.MetadataUri.LastIndexOf("$metadata") - 1));
+
+            int metaIdx = options.MetadataUri.LastIndexOf("$metadata");
+            if (metaIdx > 0) {
+                xslArg.AddParam("SerivceUri", "", options.MetadataUri.Substring(0, options.MetadataUri.LastIndexOf("$metadata") - 1));
+            }
+            else {
+                xslArg.AddParam("SerivceUri", "", "");
+                options.AutoCreateContext = false;
+            }
             xslArg.AddParam("EntityBaseClass", "", options.EntityBaseClass);
             xslArg.AddParam("ContextBaseClass", "", options.ContextBaseClass);
             xslArg.AddParam("AutoCreateContext", "", options.AutoCreateContext);
@@ -240,6 +253,22 @@ namespace JaySvcUtil
 
             var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
+
+            XslCompiledTransform xsltTS = new XslCompiledTransform(Debugger.IsAttached);
+            documentStream.Position = 0;
+
+            if (Debugger.IsAttached)
+            {
+                xsltTS.Load("JayDataContextTypeScriptGenerator_OData_" + options.ODataVersion + ".xslt");
+            }
+            else
+            {
+                xsltTS.Load(GetXslt(options.ODataVersion, true));
+            }
+
+            FileStream outputStreamTS = new FileStream(options.OutputFileName.Substring(0, options.OutputFileName.Length - 3) + ".d.ts", FileMode.Create);
+            reader = XmlReader.Create(documentStream);
+            xsltTS.Transform(reader, xslArg, outputStreamTS);
         }
 
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
