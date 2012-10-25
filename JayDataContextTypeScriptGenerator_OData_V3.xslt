@@ -137,7 +137,7 @@ module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
     remove(item: <xsl:value-of select="$fullName"/>): void;
     remove(item: { <xsl:call-template name="generateProperties"><xsl:with-param name="properties" select="$keyprops" /></xsl:call-template>}): void;
     
-    elementType: new () => <xsl:value-of select="$fullName"/>;
+    elementType: new (initData: { <xsl:call-template name="generateProperties"><xsl:with-param name="properties" select="$ctorprops" /></xsl:call-template>}) => <xsl:value-of select="$fullName"/>;
   }
 
 </xsl:if>

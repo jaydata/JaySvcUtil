@@ -1,14 +1,15 @@
 module $data {
-    interface IPromise {
-        then: { (handler: (args: any) => IPromise): IPromise; (handler: (args: any) => any): IPromise; };
-        fail: { (handler: (args: any) => IPromise): IPromise; (handler: (args: any) => any): IPromise; };
+    interface IPromise extends Object {
+        then: { (handler: (args: any) => void): IPromise; (handler: (args: any) => any): IPromise; };
+        fail: { (handler: (args: any) => void): IPromise; (handler: (args: any) => any): IPromise; };
+        valueOf(): any;
     };
 
-    class Base {
+    class Base implements Object {
         getType: () => Function;
     };
 
-    interface Event { 
+    interface Event extends Object { 
         attach(eventHandler: (sender: any, event: any) => void ): void;
         detach(eventHandler: () => void): void;
         fire(e: any, sender: any): void;
@@ -24,7 +25,7 @@ module $data {
         isValid: bool;
     };
 
-    interface EntitySet {
+    interface EntitySet extends Object {
         tableName: string;
         collectionName: string;
         
@@ -45,7 +46,7 @@ module $data {
         elementType: new () => Entity;
     }
 
-    interface Queryable {
+    interface Queryable extends Object {
         filter(predicate:(it: any) => bool): Queryable;
         filter(predicate:(it: any) => bool, thisArg: any): Queryable;
 
@@ -81,24 +82,31 @@ module $data {
         removeAll(handler: { success?: (result: number) => void; error?: (result: any) => void; }): $data.IPromise;
     }
 
-    class EntityContext {
+    class EntityContext implements Object {
+        constructor (config: { name: string; oDataServiceHost: string; });
         constructor (config: { name: string; oDataServiceHost?: string; databaseName?: string; localStoreName?: string; user?: string; password?: string; });
 
         onReady(handler: (context: EntityContext) => void): $data.IPromise;
         saveChanges(): $data.IPromise;
         saveChanges(handler: (result: number) => void ): $data.IPromise;
         saveChanges(cb: { success: (result: number) => void; error: (result: any) => void; }): $data.IPromise;
+
+        add(item: Entity): Entity;
+        attach(item: Entity): void;
+        attachOrGet(item: Entity): Entity;
+        detach(item: Entity): void;
+        remove(item: Entity ): void;
     }
 
-    export class Blob {
+    export class Blob implements Object {
     
     };
-    export class Guid {
+    export class Guid implements Object {
         constructor (value: string);
         value: string;
     };
 
-    export class Geography {
+    export class Geography implements Object {
         constructor (longitude: number, latitude: number);
         longitude: number;
         latitude: number;
@@ -106,4 +114,40 @@ module $data {
 
 };
 
+module Q { 
+    export var resolve: (p: any) => $data.IPromise;
+    export var when: (p: $data.IPromise, then?: () => any, fail?: () => any) => $data.IPromise;
+    export var all: (p: $data.IPromise[]) => $data.IPromise;
+    export var allResolved: (p: $data.IPromise[]) => $data.IPromise;
+
+    export var fcall: (handler: () => any) => $data.IPromise;
+}
+
+interface String { 
+    contains(s: string): bool;
+    startsWith(s: string): bool;
+    endsWith(s: string): bool;
+    strLength(): number;
+    indexOf(s: string): number;
+    replace(o: string, n: string): string;
+    toLowerCase(): string;
+    toUpperCase(): string;
+    trim(): string;
+    concat(s: string): string;
+}
+
+interface Date { 
+    day(): number;
+    hour(): number;
+    minute(): number;
+    month(): number;
+    second(): number;
+    year(): number;
+}
+
+interface Number { 
+    round(): number;
+    floor(): number;
+    ceiling(): number;
+}
 
