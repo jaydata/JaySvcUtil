@@ -1,7 +1,7 @@
 module $data {
     interface IPromise {
-        then: (handler: ( args: any) => IPromise ) => IPromise;
-        fail: (handler: ( args: any) => IPromise ) => IPromise;
+        then: { (handler: (args: any) => IPromise): IPromise; (handler: (args: any) => any): IPromise; };
+        fail: { (handler: (args: any) => IPromise): IPromise; (handler: (args: any) => any): IPromise; };
     };
 
     class Base {
