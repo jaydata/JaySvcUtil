@@ -145,6 +145,7 @@ module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
 
 <xsl:for-each select="edm:EntityContainer">
   <xsl:text xml:space="preserve">  </xsl:text>export class <xsl:value-of select="@Name"/> extends <xsl:value-of select="$ContextBaseClass"  /> {
+    onReady() => void): $data.IPromise;
     onReady(handler: (context: <xsl:value-of select="@Name"/>) => void): $data.IPromise;
     <xsl:for-each select="edm:EntitySet | edm:FunctionImport">
       <xsl:apply-templates select="." />;
