@@ -86,6 +86,7 @@ module $data {
         constructor (config: { name: string; oDataServiceHost: string; });
         constructor (config: { name: string; oDataServiceHost?: string; databaseName?: string; localStoreName?: string; user?: string; password?: string; });
 
+        onReady(): $data.IPromise;
         onReady(handler: (context: EntityContext) => void): $data.IPromise;
         saveChanges(): $data.IPromise;
         saveChanges(handler: (result: number) => void ): $data.IPromise;
@@ -129,10 +130,6 @@ interface String {
     endsWith(s: string): bool;
     strLength(): number;
     indexOf(s: string): number;
-    replace(o: string, n: string): string;
-    toLowerCase(): string;
-    toUpperCase(): string;
-    trim(): string;
     concat(s: string): string;
 }
 
