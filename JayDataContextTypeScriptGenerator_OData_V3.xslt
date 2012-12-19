@@ -115,6 +115,8 @@ module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
     first(predicate: (it: <xsl:value-of select="$fullName"/>, params?: any) => bool, params?: any, handler?: { success?: (result: <xsl:value-of select="$fullName"/>[]) => void; error?: (result: any) => void; }): $data.IPromise;
     
     include(selector: string): <xsl:value-of select="$fullName"/>Queryable;
+    withInlineCount(): <xsl:value-of select="$fullName"/>Queryable;
+    withInlineCount(selector: string): <xsl:value-of select="$fullName"/>Queryable;
 
     removeAll(): $data.IPromise;
     removeAll(handler: (count: number) => void): $data.IPromise;
