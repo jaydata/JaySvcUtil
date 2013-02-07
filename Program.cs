@@ -127,37 +127,87 @@ namespace JaySvcUtil
          /entitySetBaseClass default: $data.EntitySet
         */
         private const string stylesheet = @"JayDataContextGenerator.xslt";
+        private const string stylesheetTS = @"JayDataContextTypeScriptGenerator.xslt";
 
 
-        static IXPathNavigable GetXslt(string version) { 
+        /*static IXPathNavigable GetXslt(string version) { 
             return GetXslt(version, false);
+        }*/
+
+        static IXPathNavigable GetXslt(string metaNamespace, bool typeScript)
+        {
+            var filename = typeScript != true ? stylesheet : stylesheetTS;
+
+            var _asm = Assembly.GetExecutingAssembly();
+            using (Stream str = _asm.GetManifestResourceStream("JaySvcUtil." + filename))
+            using (var sr = new StreamReader(str))
+            {
+                string master = sr.ReadToEnd();
+
+                master = master.Replace("xmlns:edm=\"@@VERSIONNS@@\"", "xmlns:edm=\"" + metaNamespace + "\"");
+                if(NamespaceVersions.Keys.Contains(metaNamespace))
+                    master = master.Replace("@@VERSION@@", NamespaceVersions[metaNamespace]);
+                else
+                    master = master.Replace("@@VERSION@@", "Unknown");
+
+                return new XPathDocument(new StringReader(master));
+            }
+            
+            //if (File.Exists(filename))
+            //{
+            //    return new XPathDocument(File.OpenText(filename));
+            //}
+            //else
+            //{
+            //    //var _asm = Assembly.GetExecutingAssembly();
+            //    using (var str = _asm.GetManifestResourceStream("JaySvcUtil." + filename))
+            //    {
+            //        return new XPathDocument(str);
+            //    }
+            //}
         }
 
-        static IXPathNavigable GetXslt(string version, bool typeScript)
+        static void buildDebugXslt(string metaNamespace, bool typeScript)
         {
-            var filename = "JayDataContextGenerator_OData_" + version + ".xslt";
-            if(typeScript)
-                filename = "JayDataContextTypeScriptGenerator_OData_" + version + ".xslt";
-
+            var filename = typeScript != true ? stylesheet : stylesheetTS;
+            var latestXslt = String.Empty;
+            
             if (File.Exists(filename)) {
-                return new XPathDocument(File.OpenText(filename));
-            } else {
-                var _asm = Assembly.GetExecutingAssembly();
-                using (var str = _asm.GetManifestResourceStream("JaySvcUtil." + filename))
-                {
-                    return new XPathDocument(str);
+                using (var sr = File.OpenText(filename)) {
+                    latestXslt = sr.ReadToEnd();
+                    //string master = sr.ReadToEnd();
+                    //if (master.Contains("xmlns:edm=\"" + metaNamespace + "\"")) {
+                    //    return;
+                    //}
                 }
+            }
+
+
+            var _asm = Assembly.GetExecutingAssembly();
+            using (Stream str = _asm.GetManifestResourceStream("JaySvcUtil." + filename))
+            using (var sr = new StreamReader(str))
+            {
+                string master = sr.ReadToEnd();
+
+                master = master.Replace("xmlns:edm=\"@@VERSIONNS@@\"", "xmlns:edm=\"" + metaNamespace + "\"");
+                if (NamespaceVersions.Keys.Contains(metaNamespace))
+                    master = master.Replace("@@VERSION@@", NamespaceVersions[metaNamespace]);
+                else
+                    master = master.Replace("@@VERSION@@", "Unknown");
+
+                if(latestXslt != master)
+                    File.WriteAllText(filename, master);
             }
         }
 
         //http://schemas.microsoft.com/ado/2007/05/edm <-- i found this somewhere --> sharepoint
         public static Dictionary<string, string> NamespaceVersions  = new Dictionary<string,string>
         {
-            {"http://schemas.microsoft.com/ado/2007/05/edm", "V11" },
-            {"http://schemas.microsoft.com/ado/2006/04/edm", "V1" },
-            {"http://schemas.microsoft.com/ado/2008/09/edm", "V2" },
-            {"http://schemas.microsoft.com/ado/2009/08/edm", "V21" },
-            {"http://schemas.microsoft.com/ado/2009/11/edm", "V3" }
+            {"http://schemas.microsoft.com/ado/2007/05/edm", "V1.1" },
+            {"http://schemas.microsoft.com/ado/2006/04/edm", " V1 " },
+            {"http://schemas.microsoft.com/ado/2008/09/edm", " V2 " },
+            {"http://schemas.microsoft.com/ado/2009/08/edm", "V2.1" },
+            {"http://schemas.microsoft.com/ado/2009/11/edm", " V3 " }
         };
 
         static void Main(string[] args)
@@ -215,20 +265,21 @@ namespace JaySvcUtil
 
             var ns = schemaNode.NamespaceURI;
 
-            if (string.IsNullOrWhiteSpace(options.ODataVersion))
-            {
-                options.ODataVersion = NamespaceVersions[ns];
-            }
+            //if (string.IsNullOrWhiteSpace(options.ODataVersion))
+            //{
+                options.ODataVersion = NamespaceVersions.Keys.Contains(ns) ? NamespaceVersions[ns] : "Unknown";
+            //}
            
 
             XslCompiledTransform xslt = new XslCompiledTransform(Debugger.IsAttached);
             if (Debugger.IsAttached)
             {
-                xslt.Load("JayDataContextGenerator_OData_" + options.ODataVersion + ".xslt");
+                buildDebugXslt(ns, false);
+                xslt.Load(stylesheet);
             }
             else
             {
-                xslt.Load(GetXslt(options.ODataVersion));
+                xslt.Load(GetXslt(ns, false));
             }
 
             Console.WriteLine("OData version: " + options.ODataVersion);
@@ -254,16 +305,19 @@ namespace JaySvcUtil
             var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
 
+            Console.WriteLine("Generating TypeScript document");
+
             XslCompiledTransform xsltTS = new XslCompiledTransform(Debugger.IsAttached);
             documentStream.Position = 0;
 
             if (Debugger.IsAttached)
             {
-                xsltTS.Load("JayDataContextTypeScriptGenerator_OData_" + options.ODataVersion + ".xslt");
+                buildDebugXslt(ns, true);
+                xsltTS.Load(stylesheetTS);
             }
             else
             {
-                xsltTS.Load(GetXslt(options.ODataVersion, true));
+                xsltTS.Load(GetXslt(ns, true));
             }
 
             FileStream outputStreamTS = new FileStream(options.OutputFileName.Substring(0, options.OutputFileName.Length - 3) + ".d.ts", FileMode.Create);
