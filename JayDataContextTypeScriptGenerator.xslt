@@ -67,8 +67,18 @@ module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
   <xsl:variable name="fullName">
     <xsl:value-of select="concat($DefaultNamespace,parent::edm:Schema/@Namespace)"/>.<xsl:value-of select="@Name"/>
   </xsl:variable>
- 
-  <xsl:text xml:space="preserve">  </xsl:text>class <xsl:value-of select="@Name"/> extends <xsl:value-of select="$EntityBaseClass"  /> {
+  <xsl:variable name="BaseType">
+    <xsl:choose>
+      <xsl:when test="@BaseType">
+        <xsl:value-of select="@BaseType"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="$EntityBaseClass"  />
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  
+  <xsl:text xml:space="preserve">  </xsl:text>class <xsl:value-of select="@Name"/> extends <xsl:value-of select="$BaseType"  /> {
     constructor ();
     constructor (initData: { <xsl:call-template name="generateProperties"><xsl:with-param name="properties" select="$ctorprops" /></xsl:call-template>});
     <xsl:choose>
@@ -131,7 +141,9 @@ module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
   export interface <xsl:value-of select="@Name"/>Set extends <xsl:value-of select="@Name"/>Queryable {
     add(initData: { <xsl:call-template name="generateProperties"><xsl:with-param name="properties" select="$ctorprops" /></xsl:call-template>}): <xsl:value-of select="$fullName"/>;
     add(item: <xsl:value-of select="$fullName"/>): <xsl:value-of select="$fullName"/>;
-
+    addMany(items: { <xsl:call-template name="generateProperties"><xsl:with-param name="properties" select="$ctorprops" /></xsl:call-template>}[]): <xsl:value-of select="$fullName"/>[];
+    addMany(items: <xsl:value-of select="$fullName"/>[]): <xsl:value-of select="$fullName"/>[];
+  
     attach(item: <xsl:value-of select="$fullName"/>): void;
     attach(item: { <xsl:call-template name="generateProperties"><xsl:with-param name="properties" select="$keyprops" /></xsl:call-template>}): void;
     attachOrGet(item: <xsl:value-of select="$fullName"/>): <xsl:value-of select="$fullName"/>;

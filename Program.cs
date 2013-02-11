@@ -40,8 +40,8 @@ namespace JaySvcUtil
             [Option("a", "collectionBaseClass", HelpText = "The name of the base class for the generated entity sets. Default is Array.")]
             public string CollectionBaseClass = "Array";
 
-            [Option("b", "autoCreateContext", HelpText = "Create an instance of the context with default parameters. Default is true")]
-            public bool AutoCreateContext = true;
+            [Option("b", "autoCreateContext", HelpText = "Create an instance of the context with default parameters. Default is false")]
+            public bool AutoCreateContext = false;
 
             [Option("x", "contextInstanceName", HelpText = "The name of the automatically generated context instance under the context namespace. Default is 'context'")]
             public string ContextInstanceName = "context";
@@ -68,6 +68,9 @@ namespace JaySvcUtil
 
             [Option("v", "protocolVersion", HelpText="The OData version of the service: V1, V2 or V3. Autodetect if missing")]
             public string ODataVersion = "";
+
+            [Option("d", "maxDataServiceVersion", HelpText = "The OData MaxDataServiceVersion of the service: 1.0, 2.0 or 3.0. Autodetect if missing")]
+            public string ODataMaxDataServiceVersion = "";
 
             private void HandleParsingErrorsInHelp(HelpText help)
             {
@@ -210,6 +213,15 @@ namespace JaySvcUtil
             {"http://schemas.microsoft.com/ado/2009/11/edm", " V3 " }
         };
 
+        public static Dictionary<string, string> maxNamespaceVersions = new Dictionary<string, string>
+        {
+            {"http://schemas.microsoft.com/ado/2007/05/edm", "1.0" },
+            {"http://schemas.microsoft.com/ado/2006/04/edm", "1.0" },
+            {"http://schemas.microsoft.com/ado/2008/09/edm", "2.0" },
+            {"http://schemas.microsoft.com/ado/2009/08/edm", "2.0" },
+            {"http://schemas.microsoft.com/ado/2009/11/edm", "3.0" }
+        };
+
         static void Main(string[] args)
         {
             var options = new Options();
@@ -264,10 +276,17 @@ namespace JaySvcUtil
             var schemaNode = doc.SelectSingleNode("//*[local-name() = 'Schema']");
 
             var ns = schemaNode.NamespaceURI;
+            var maxDSVersion = dsNode.Attributes["m:MaxDataServiceVersion"];
+            var version = maxDSVersion != null ? maxDSVersion.Value : "";
 
             //if (string.IsNullOrWhiteSpace(options.ODataVersion))
             //{
                 options.ODataVersion = NamespaceVersions.Keys.Contains(ns) ? NamespaceVersions[ns] : "Unknown";
+
+                if (version != String.Empty)
+                    options.ODataMaxDataServiceVersion = version;
+                else
+                    options.ODataMaxDataServiceVersion = maxNamespaceVersions.Keys.Contains(ns) ? maxNamespaceVersions[ns] : "3.0";
             //}
            
 
@@ -301,6 +320,7 @@ namespace JaySvcUtil
             xslArg.AddParam("CollectionBaseClass", "", options.CollectionBaseClass);
             xslArg.AddParam("DefaultNamespace", "", "");
             xslArg.AddParam("contextNamespace", "", options.ContextNamespace);
+            xslArg.AddParam("MaxDataserviceVersion", "", options.ODataMaxDataServiceVersion);
 
             var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
