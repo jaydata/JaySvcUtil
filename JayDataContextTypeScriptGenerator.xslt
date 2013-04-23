@@ -23,20 +23,35 @@
 
   <xsl:variable name="EdmJayTypeMapping">
     <map from="Edm.Boolean" to="bool" />
-    <map from="Edm.Binary" to="$data.Blob" />
+    <map from="Edm.Binary" to="Uint8Array" />
     <map from="Edm.DateTime" to="Date" />
     <map from="Edm.DateTimeOffset" to="Date" />
-    <map from="Edm.Time" to="number" />
-    <map from="Edm.Decimal" to="number" />
+    <map from="Edm.Time" to="Date" />
+    <map from="Edm.Decimal" to="string" />
     <map from="Edm.Single" to="number" />
+    <map from="Edm.Float" to="number" />
     <map from="Edm.Double" to="number" />
-    <map from="Edm.Guid" to="$data.Guid" />
+    <map from="Edm.Guid" to="string" />
     <map from="Edm.Int16" to="number" />
     <map from="Edm.Int32" to="number" />
-    <map from="Edm.Int64" to="number" />
+    <map from="Edm.Int64" to="string" />
     <map from="Edm.Byte" to="number" />
+    <map from="Edm.SByte" to="number" />
     <map from="Edm.String" to="string" />
     <map from="Edm.GeographyPoint" to="$data.Geography" />
+    <map from="Edm.GeographyLineString" to="$data.GeographyLineString" />
+    <map from="Edm.GeographyPolygon" to="$data.GeographyPolygon" />
+    <map from="Edm.GeographyMultiPoint" to="$data.GeographyMultiPoint" />
+    <map from="Edm.GeographyMultiLineString" to="$data.GeographyMultiLineString" />
+    <map from="Edm.GeographyMultiPolygon" to="$data.GeographyMultiPolygon" />
+    <map from="Edm.GeographyCollection" to="$data.GeographyCollection" />
+    <map from="Edm.GeometryPoint" to="$data.GeometryPoint" />
+    <map from="Edm.GeometryLineString" to="$data.GeometryLineString" />
+    <map from="Edm.GeometryPolygon" to="$data.GeometryPolygon" />
+    <map from="Edm.GeometryMultiPoint" to="$data.GeometryMultiPoint" />
+    <map from="Edm.GeometryMultiLineString" to="$data.GeometryMultiLineString" />
+    <map from="Edm.GeometryMultiPolygon" to="$data.GeometryMultiPolygon" />
+    <map from="Edm.GeometryCollection" to="$data.GeometryCollection" />
   </xsl:variable>
 
   <xsl:template match="/">///&lt;reference path="./jaydata.d.ts" /&gt;
@@ -464,12 +479,13 @@ module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
       <xsl:when test="starts-with(., 'Collection')">
         <attribute name="type">Array</attribute>
         <xsl:variable name="len" select="string-length(.)-12"/>
+        <xsl:variable name="currType" select="substring(.,12,$len)"/>
         <xsl:choose>
-          <xsl:when test="starts-with(., ../../../@Namespace)">
-            <attribute name="elementType"><xsl:value-of select="$DefaultNamespace"/><xsl:value-of select="substring(.,12,$len)" /></attribute>
+          <xsl:when test="starts-with($currType, ../../../@Namespace)">
+            <attribute name="elementType"><xsl:value-of select="$DefaultNamespace"/><xsl:value-of select="$currType" /></attribute>
           </xsl:when>
           <xsl:otherwise>
-            <attribute name="elementType"><xsl:value-of select="substring(.,12,$len)" /></attribute>
+            <attribute name="elementType"><xsl:value-of select="$currType" /></attribute>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:when>
