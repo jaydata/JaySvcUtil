@@ -72,6 +72,12 @@ namespace JaySvcUtil
             [Option("d", "maxDataServiceVersion", HelpText = "The OData MaxDataServiceVersion of the service: 1.0, 2.0 or 3.0. Autodetect if missing")]
             public string ODataMaxDataServiceVersion = "";
 
+            [Option("f", "typeFilter", HelpText = "Model type filter ")]
+            public string TypeFilter = string.Empty;
+
+            [Option("w", "withoutNavPropertis", HelpText = "Build Model without navigation properties")]
+            public bool WithoutNavPropertis = false;
+
             private void HandleParsingErrorsInHelp(HelpText help)
             {
                 string errors = help.RenderParsingErrorsText(this);
@@ -279,6 +285,64 @@ namespace JaySvcUtil
             var maxDSVersion = dsNode.Attributes["m:MaxDataServiceVersion"];
             var version = maxDSVersion != null ? maxDSVersion.Value : "";
 
+            string metadataTypes = options.TypeFilter;
+            if (metadataTypes != string.Empty)
+            {
+                List<string> datas = metadataTypes.Split(new char[]{';'}, StringSplitOptions.RemoveEmptyEntries).ToList();
+                List<TypeData> types = new List<TypeData>();
+                for (int i = 0; i < datas.Count; i++)
+                {
+                    if (datas[i] != String.Empty) {
+                        TypeData typeData = new TypeData(datas[i]);
+                        string typeShortName = typeData.Name;
+                        string containerName = string.Empty;
+                        if (typeData.Name.LastIndexOf('.') > 0)
+                        {
+                            containerName = typeData.Name.Substring(0, typeData.Name.LastIndexOf('.'));
+                            typeShortName = typeData.Name.Substring(typeData.Name.LastIndexOf('.') + 1);
+                        }
+
+                        var conainers = doc.SelectNodes("//*[local-name() = 'EntityContainer' and @Name = '" + containerName + "']");
+                        for (int j = 0; j < conainers.Count; j++)
+                        {
+                            var entitySetDef = conainers[j].SelectSingleNode("*[local-name() = 'EntitySet' and @Name = '" + typeShortName + "']");
+                            if (entitySetDef != null)
+                            {
+                                typeData.Name = entitySetDef.Attributes["EntityType"].Value;
+                                break;
+                            }
+
+                        }
+                        types.Add(typeData);
+                        
+                    }
+                }
+
+                List<TypeData> discoveredData = DiscoverTypeDependencies(types, doc, !options.WithoutNavPropertis);
+
+                var complex = doc.SelectNodes("//*[local-name() = 'ComplexType']");
+                for (int i = 0; i < complex.Count; i++)
+                {
+                    string cns = complex[i].SelectSingleNode("../.").Attributes["Namespace"].Value;
+                    string data = cns == string.Empty ? complex[i].Attributes["Name"].Value : (cns + "." + complex[i].Attributes["Name"].Value);
+                    discoveredData.Add(new TypeData(data));
+                }
+
+                string result = "";
+                for (int i = 0; i < discoveredData.Count; i++)
+                {
+                    TypeData row = discoveredData[i];
+                    if (row.Fields.Count > 0) {
+                        result += row.Name + ":" + string.Join(",", row.Fields) + ";";
+                    }
+                    else {
+                        result += row.Name + ";";
+                    }
+                }
+
+                metadataTypes = result;
+            }
+
             //if (string.IsNullOrWhiteSpace(options.ODataVersion))
             //{
                 options.ODataVersion = NamespaceVersions.Keys.Contains(ns) ? NamespaceVersions[ns] : "Unknown";
@@ -321,12 +385,14 @@ namespace JaySvcUtil
             xslArg.AddParam("DefaultNamespace", "", "");
             xslArg.AddParam("contextNamespace", "", options.ContextNamespace);
             xslArg.AddParam("MaxDataserviceVersion", "", options.ODataMaxDataServiceVersion);
+            xslArg.AddParam("AllowedTypesList", "", metadataTypes);
+            xslArg.AddParam("GenerateNavigationProperties", "", !options.WithoutNavPropertis);
 
             var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
 
             Console.WriteLine("Generating TypeScript document");
-
+            return;
             XslCompiledTransform xsltTS = new XslCompiledTransform(Debugger.IsAttached);
             documentStream.Position = 0;
 
@@ -351,5 +417,131 @@ namespace JaySvcUtil
             Console.WriteLine("Error:" + ((Exception)e.ExceptionObject).Message);
        
         }
+
+        static List<TypeData> DiscoverTypeDependencies(List<TypeData> types, XmlDocument doc, bool withNavPropertis)
+        {
+            List<TypeData> allowedTypes = new List<TypeData>();
+            List<string> allowedTypeNames = new List<string>();
+            List<string> collect = new List<string>();
+
+            for (int i = 0; i < types.Count; i++)
+            {
+                collect.Remove(types[i].Name);
+                discoverType(types[i], doc, allowedTypes, allowedTypeNames, withNavPropertis, true, collect);
+            }
+
+            for (int i = 0; i < collect.Count; i++)
+            {
+                discoverType(new TypeData(collect[i]), doc, allowedTypes, allowedTypeNames, withNavPropertis, false, new List<string>());
+            }
+
+            return allowedTypes;
+        }
+
+        static void discoverType(TypeData typeData, XmlDocument doc, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool collectTypes, List<string> collectedTypes)
+        {
+            string typeName = typeData.Name;
+
+            if (allowedTypeNames.Contains(typeName))
+            {
+                return;
+            }
+
+            string typeShortName = typeName;
+            string typeNamespace = string.Empty;
+            if (typeName.LastIndexOf('.') > 0)
+            {
+                typeNamespace = typeName.Substring(0, typeName.LastIndexOf('.'));
+                typeShortName = typeName.Substring(typeName.LastIndexOf('.') + 1);
+            }
+
+            var schemaNode = doc.SelectSingleNode("//*[local-name() = 'Schema' and @Namespace = '" + typeNamespace + "']");
+            if (schemaNode != null)
+            {
+                var typeNode = schemaNode.SelectSingleNode("*[(local-name() = 'EntityType' or local-name() = 'ComplexType') and @Name = '" + typeShortName + "']");
+                if (typeNode != null)
+                {
+                    allowedTypes.Add(typeData);
+                    allowedTypeNames.Add(typeName);
+
+                    if (typeData.Fields.Count > 0) {
+                        var keys = typeNode.SelectNodes("*[local-name() = 'Key']/*[local-name() = 'PropertyRef']");
+                        if (keys != null)
+                        {
+                            for (int j = 0; j < keys.Count; j++)
+                            {
+                                string keyField = keys[j].Attributes["Name"].Value;
+                                if (!typeData.Fields.Contains(keyField))
+                                    typeData.Fields.Insert(j, keyField);
+                            }
+                        }
+                    }
+
+                    if (withNavPropertis)
+                    {
+                        var navPropNodes = typeNode.SelectNodes("*[local-name() = 'NavigationProperty']");
+                        for (int j = 0; j < navPropNodes.Count; j++)
+                        {
+                            var navProp = navPropNodes[j];
+                            if (typeData.Fields.Count == 0 || typeData.Fields.Contains(navProp.Attributes["Name"].Value))
+                            {
+
+                                var FromRole = navProp.Attributes["FromRole"].Value;
+                                var ToRole = navProp.Attributes["ToRole"].Value;
+
+                                var association = schemaNode.SelectSingleNode("*[local-name() = 'Association']/*[local-name() = 'End' and @Role = '" + FromRole + "' and @Type != '" + typeName + "']");
+                                if (association == null)
+                                {
+                                    association = schemaNode.SelectSingleNode("*[local-name() = 'Association']/*[local-name() = 'End' and @Role = '" + ToRole + "' and @Type != '" + typeName + "']");
+                                }
+
+                                if (association != null)
+                                {
+                                    string nav_type = association.Attributes["Type"].Value;
+
+                                    if (collectTypes)
+                                    {
+                                        if (!collectedTypes.Contains(nav_type) && !allowedTypeNames.Contains(nav_type))
+                                            collectedTypes.Add(nav_type);
+                                    }
+                                    else
+                                    {
+                                        discoverType(new TypeData(nav_type), doc, allowedTypes, allowedTypeNames, withNavPropertis, false, collectedTypes);
+                                    }
+                                }
+                                //else
+                                //{
+                                //    Console.WriteLine(typeName + ":" + FromRole + "/" + ToRole);
+                                //}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public class TypeData {
+        public TypeData(string data)
+        {
+            if (data.Contains(':'))
+            {
+                string[] parts = data.Split(new char[]{':'}, StringSplitOptions.RemoveEmptyEntries);
+                Name = parts[0];
+                Fields = parts[1].Split(',').ToList();
+            }
+            else {
+                Name = data;
+                Fields = new List<string>();
+            }
+        }
+
+        public string Name { get; set; }
+        public List<string> Fields { get; set; }
+
+        public bool isUsed(string field) {
+            return this.Fields.Count() == 0 || this.Fields.Contains(field);
+        }
+
     }
 }
