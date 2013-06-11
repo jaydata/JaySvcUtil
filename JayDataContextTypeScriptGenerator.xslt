@@ -26,7 +26,7 @@
     <map from="Edm.Binary" to="Uint8Array" />
     <map from="Edm.DateTime" to="Date" />
     <map from="Edm.DateTimeOffset" to="Date" />
-    <map from="Edm.Time" to="Date" />
+    <map from="Edm.Time" to="string" />
     <map from="Edm.Decimal" to="string" />
     <map from="Edm.Single" to="number" />
     <map from="Edm.Float" to="number" />
