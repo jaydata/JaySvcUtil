@@ -49,6 +49,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="TypeFilterConfig.xslt" />
     <EmbeddedResource Include="JayDataContextGenerator.xslt">
       <SubType>Designer</SubType>
     </EmbeddedResource>

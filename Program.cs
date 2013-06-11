@@ -75,6 +75,9 @@ namespace JaySvcUtil
             [Option("f", "typeFilter", HelpText = "Model type filter ")]
             public string TypeFilter = string.Empty;
 
+            [Option("t", "typeFilterConfig", HelpText = "Model type filter from config XML")]
+            public string TypeFilterConfig = string.Empty;
+
             [Option("w", "withoutNavPropertis", HelpText = "Build Model without navigation properties")]
             public bool WithoutNavPropertis = false;
 
@@ -137,6 +140,7 @@ namespace JaySvcUtil
         */
         private const string stylesheet = @"JayDataContextGenerator.xslt";
         private const string stylesheetTS = @"JayDataContextTypeScriptGenerator.xslt";
+        private const string stylesheetConfig = @"TypeFilterConfig.xslt";
 
 
         /*static IXPathNavigable GetXslt(string version) { 
@@ -286,6 +290,32 @@ namespace JaySvcUtil
             var version = maxDSVersion != null ? maxDSVersion.Value : "";
 
             string metadataTypes = options.TypeFilter;
+
+            if (metadataTypes == string.Empty && options.TypeFilterConfig != string.Empty) {
+                MemoryStream configStream = new MemoryStream();
+                File.OpenRead(options.TypeFilterConfig).CopyTo(configStream);
+                configStream.Position = 0;
+
+                XmlDocument configDoc = new XmlDocument();
+                configDoc.Load(configStream);
+                configStream.Position = 0;
+
+                XslCompiledTransform configXslt = new XslCompiledTransform(Debugger.IsAttached);
+                var _asm = Assembly.GetExecutingAssembly();
+                using (Stream str = _asm.GetManifestResourceStream("JaySvcUtil." + stylesheetConfig))
+                using (var sr = new StreamReader(str))
+                {
+                    configXslt.Load(new XPathDocument(sr));
+                }
+                var configReader = XmlReader.Create(configStream);
+
+                StringWriter sw = new StringWriter();
+                XmlWriter xwo = XmlWriter.Create(sw, configXslt.OutputSettings);
+                configXslt.Transform(configReader, null, xwo);
+
+                metadataTypes = sw.ToString();
+            }
+
             if (metadataTypes != string.Empty)
             {
                 List<string> datas = metadataTypes.Split(new char[]{';'}, StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -392,7 +422,7 @@ namespace JaySvcUtil
             xslt.Transform(reader, xslArg, outputStream);
 
             Console.WriteLine("Generating TypeScript document");
-            return;
+
             XslCompiledTransform xsltTS = new XslCompiledTransform(Debugger.IsAttached);
             documentStream.Position = 0;
 
