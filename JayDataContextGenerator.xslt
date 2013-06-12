@@ -164,7 +164,7 @@
 
 
      <xsl:variable name="props">
-       <xsl:for-each select="*[local-name() = 'Property' or ($GenerateNavigationProperties = 'true' and local-name() = 'NavigationProperty')]">
+       <xsl:for-each select="*[local-name() != 'NavigationProperty' or ($GenerateNavigationProperties = 'true' and local-name() = 'NavigationProperty')]">
          <xsl:variable name="fname" select="@Name" />
          <xsl:if test="not($filterFields) or $thisTypeNode/field[@name = $fname]">
            <xsl:apply-templates select="." />

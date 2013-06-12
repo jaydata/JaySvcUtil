@@ -318,6 +318,9 @@ namespace JaySvcUtil
 
             if (metadataTypes != string.Empty)
             {
+                XmlNamespaceManager nsmanager = new XmlNamespaceManager(doc.NameTable);
+                nsmanager.AddNamespace("edmx", ns);
+
                 List<string> datas = metadataTypes.Split(new char[]{';'}, StringSplitOptions.RemoveEmptyEntries).ToList();
                 List<TypeData> types = new List<TypeData>();
                 for (int i = 0; i < datas.Count; i++)
@@ -332,10 +335,10 @@ namespace JaySvcUtil
                             typeShortName = typeData.Name.Substring(typeData.Name.LastIndexOf('.') + 1);
                         }
 
-                        var conainers = doc.SelectNodes("//*[local-name() = 'EntityContainer' and @Name = '" + containerName + "']");
+                        var conainers = doc.SelectNodes("//edmx:EntityContainer[@Name = '" + containerName + "']", nsmanager);
                         for (int j = 0; j < conainers.Count; j++)
                         {
-                            var entitySetDef = conainers[j].SelectSingleNode("*[local-name() = 'EntitySet' and @Name = '" + typeShortName + "']");
+                            var entitySetDef = conainers[j].SelectSingleNode("edmx:EntitySet[@Name = '" + typeShortName + "']", nsmanager);
                             if (entitySetDef != null)
                             {
                                 typeData.Name = entitySetDef.Attributes["EntityType"].Value;
@@ -348,7 +351,7 @@ namespace JaySvcUtil
                     }
                 }
 
-                List<TypeData> discoveredData = DiscoverTypeDependencies(types, doc, !options.WithoutNavPropertis);
+                List<TypeData> discoveredData = DiscoverTypeDependencies(types, doc, nsmanager, !options.WithoutNavPropertis);
 
                 var complex = doc.SelectNodes("//*[local-name() = 'ComplexType']");
                 for (int i = 0; i < complex.Count; i++)
@@ -448,7 +451,7 @@ namespace JaySvcUtil
        
         }
 
-        static List<TypeData> DiscoverTypeDependencies(List<TypeData> types, XmlDocument doc, bool withNavPropertis)
+        static List<TypeData> DiscoverTypeDependencies(List<TypeData> types, XmlDocument doc, XmlNamespaceManager nsmanager, bool withNavPropertis)
         {
             List<TypeData> allowedTypes = new List<TypeData>();
             List<string> allowedTypeNames = new List<string>();
@@ -457,18 +460,18 @@ namespace JaySvcUtil
             for (int i = 0; i < types.Count; i++)
             {
                 collect.Remove(types[i].Name);
-                discoverType(types[i], doc, allowedTypes, allowedTypeNames, withNavPropertis, true, collect);
+                discoverType(types[i], doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, true, collect);
             }
 
             for (int i = 0; i < collect.Count; i++)
             {
-                discoverType(new TypeData(collect[i]), doc, allowedTypes, allowedTypeNames, withNavPropertis, false, new List<string>());
+                discoverType(new TypeData(collect[i]), doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, false, new List<string>());
             }
 
             return allowedTypes;
         }
 
-        static void discoverType(TypeData typeData, XmlDocument doc, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool collectTypes, List<string> collectedTypes)
+        static void discoverType(TypeData typeData, XmlDocument doc, XmlNamespaceManager nsmanager, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool collectTypes, List<string> collectedTypes)
         {
             string typeName = typeData.Name;
 
@@ -476,6 +479,7 @@ namespace JaySvcUtil
             {
                 return;
             }
+            Console.WriteLine("Discover: " + typeName);
 
             string typeShortName = typeName;
             string typeNamespace = string.Empty;
@@ -485,17 +489,17 @@ namespace JaySvcUtil
                 typeShortName = typeName.Substring(typeName.LastIndexOf('.') + 1);
             }
 
-            var schemaNode = doc.SelectSingleNode("//*[local-name() = 'Schema' and @Namespace = '" + typeNamespace + "']");
+            var schemaNode = doc.SelectSingleNode("//edmx:Schema[@Namespace = '" + typeNamespace + "']", nsmanager);
             if (schemaNode != null)
             {
-                var typeNode = schemaNode.SelectSingleNode("*[(local-name() = 'EntityType' or local-name() = 'ComplexType') and @Name = '" + typeShortName + "']");
+                var typeNode = schemaNode.SelectSingleNode("edmx:EntityType[@Name = '" + typeShortName + "'] | edmx:ComplexType[@Name = '" + typeShortName + "']", nsmanager);
                 if (typeNode != null)
                 {
                     allowedTypes.Add(typeData);
                     allowedTypeNames.Add(typeName);
 
-                    if (typeData.Fields.Count > 0) {
-                        var keys = typeNode.SelectNodes("*[local-name() = 'Key']/*[local-name() = 'PropertyRef']");
+                    /*if (typeData.Fields.Count > 0) {
+                        var keys = typeNode.SelectNodes("edmx:Key/edmx:PropertyRef", nsmanager);
                         if (keys != null)
                         {
                             for (int j = 0; j < keys.Count; j++)
@@ -505,11 +509,11 @@ namespace JaySvcUtil
                                     typeData.Fields.Insert(j, keyField);
                             }
                         }
-                    }
+                    }*/
 
                     if (withNavPropertis)
                     {
-                        var navPropNodes = typeNode.SelectNodes("*[local-name() = 'NavigationProperty']");
+                        var navPropNodes = typeNode.SelectNodes("edmx:NavigationProperty", nsmanager);
                         for (int j = 0; j < navPropNodes.Count; j++)
                         {
                             var navProp = navPropNodes[j];
@@ -519,10 +523,10 @@ namespace JaySvcUtil
                                 var FromRole = navProp.Attributes["FromRole"].Value;
                                 var ToRole = navProp.Attributes["ToRole"].Value;
 
-                                var association = schemaNode.SelectSingleNode("*[local-name() = 'Association']/*[local-name() = 'End' and @Role = '" + FromRole + "' and @Type != '" + typeName + "']");
+                                var association = schemaNode.SelectSingleNode("edmx:Association/edmx:End[@Role = '" + FromRole + "' and @Type != '" + typeName + "']", nsmanager);
                                 if (association == null)
                                 {
-                                    association = schemaNode.SelectSingleNode("*[local-name() = 'Association']/*[local-name() = 'End' and @Role = '" + ToRole + "' and @Type != '" + typeName + "']");
+                                    association = schemaNode.SelectSingleNode("edmx:Association/edmx:End[@Role = '" + ToRole + "' and @Type != '" + typeName + "']", nsmanager);
                                 }
 
                                 if (association != null)
@@ -536,7 +540,7 @@ namespace JaySvcUtil
                                     }
                                     else
                                     {
-                                        discoverType(new TypeData(nav_type), doc, allowedTypes, allowedTypeNames, withNavPropertis, false, collectedTypes);
+                                        discoverType(new TypeData(nav_type), doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, false, collectedTypes);
                                     }
                                 }
                                 //else

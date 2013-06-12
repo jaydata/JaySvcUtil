@@ -12,8 +12,8 @@
   <xsl:template match="/">
     <xsl:for-each select="*/Type"  xml:space="default">
       <xsl:value-of select="@Name"/>
-      <xsl:if test="count(Property) > 0">:</xsl:if>
-      <xsl:for-each select="Property">
+      <xsl:if test="count(Member) > 0">:</xsl:if>
+      <xsl:for-each select="Member">
         <xsl:value-of select="@Name"/>
         <xsl:if test="position() != last()">,</xsl:if>
       </xsl:for-each>
