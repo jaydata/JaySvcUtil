@@ -72,14 +72,17 @@ namespace JaySvcUtil
             [Option("d", "maxDataServiceVersion", HelpText = "The OData MaxDataServiceVersion of the service: 1.0, 2.0 or 3.0. Autodetect if missing")]
             public string ODataMaxDataServiceVersion = "";
 
-            [Option("f", "typeFilter", HelpText = "Model type filter ")]
+            [Option("f", "typeFilter", HelpText = "Model type filter")]
             public string TypeFilter = string.Empty;
 
             [Option("t", "typeFilterConfig", HelpText = "Model type filter from config XML")]
             public string TypeFilterConfig = string.Empty;
 
-            [Option("w", "withoutNavPropertis", HelpText = "Build Model without navigation properties")]
-            public bool WithoutNavPropertis = false;
+            [Option("D", "dependentRelationsOnly", HelpText = "Model with dependent relations only")]
+            public bool DependentRelationsOnly = false;
+
+            [Option("N", "navigation", HelpText = "Model with navigation properties (default: true)")]
+            public string Navigation = "true";
 
             private void HandleParsingErrorsInHelp(HelpText help)
             {
@@ -351,7 +354,15 @@ namespace JaySvcUtil
                     }
                 }
 
-                List<TypeData> discoveredData = DiscoverTypeDependencies(types, doc, nsmanager, !options.WithoutNavPropertis);
+                List<TypeData> discoveredData = null;
+                if (options.DependentRelationsOnly)
+                {
+                    discoveredData = DiscoverProperyDependencies(types, doc, nsmanager, options.Navigation == "true");
+                }
+                else
+                {
+                    discoveredData = DiscoverTypeDependencies(types, doc, nsmanager, options.Navigation == "true");
+                }
 
                 var complex = doc.SelectNodes("//*[local-name() = 'ComplexType']");
                 for (int i = 0; i < complex.Count; i++)
@@ -419,7 +430,7 @@ namespace JaySvcUtil
             xslArg.AddParam("contextNamespace", "", options.ContextNamespace);
             xslArg.AddParam("MaxDataserviceVersion", "", options.ODataMaxDataServiceVersion);
             xslArg.AddParam("AllowedTypesList", "", metadataTypes);
-            xslArg.AddParam("GenerateNavigationProperties", "", !options.WithoutNavPropertis);
+            xslArg.AddParam("GenerateNavigationProperties", "", options.Navigation == "true");
 
             var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
@@ -470,7 +481,6 @@ namespace JaySvcUtil
 
             return allowedTypes;
         }
-
         static void discoverType(TypeData typeData, XmlDocument doc, XmlNamespaceManager nsmanager, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool collectTypes, List<string> collectedTypes)
         {
             string typeName = typeData.Name;
@@ -547,6 +557,86 @@ namespace JaySvcUtil
                                 //{
                                 //    Console.WriteLine(typeName + ":" + FromRole + "/" + ToRole);
                                 //}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+
+        static List<TypeData> DiscoverProperyDependencies(List<TypeData> types, XmlDocument doc, XmlNamespaceManager nsmanager, bool withNavPropertis)
+        {
+            List<TypeData> allowedTypes = new List<TypeData>();
+            List<string> allowedTypeNames = types.Select(t => t.Name).ToList();
+            List<string> collect = new List<string>();
+
+            for (int i = 0; i < types.Count; i++)
+            {
+                discoverProperties(types[i], doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, true, collect);
+            }
+
+            return allowedTypes;
+        }
+        static void discoverProperties(TypeData typeData, XmlDocument doc, XmlNamespaceManager nsmanager, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool collectTypes, List<string> collectedTypes)
+        {
+            string typeName = typeData.Name;
+            Console.WriteLine("Discover: " + typeName);
+
+            bool hasProperty = typeData.Fields.Count != 0;
+            string typeShortName = typeName;
+            string typeNamespace = string.Empty;
+            if (typeName.LastIndexOf('.') > 0)
+            {
+                typeNamespace = typeName.Substring(0, typeName.LastIndexOf('.'));
+                typeShortName = typeName.Substring(typeName.LastIndexOf('.') + 1);
+            }
+
+            var schemaNode = doc.SelectSingleNode("//edmx:Schema[@Namespace = '" + typeNamespace + "']", nsmanager);
+            if (schemaNode != null)
+            {
+                var typeNode = schemaNode.SelectSingleNode("edmx:EntityType[@Name = '" + typeShortName + "'] | edmx:ComplexType[@Name = '" + typeShortName + "']", nsmanager);
+                if (typeNode != null)
+                {
+                    allowedTypes.Add(typeData);
+
+                    if (!hasProperty)
+                    {
+                        var properties = typeNode.SelectNodes("edmx:Property", nsmanager);
+                        if (properties != null)
+                        {
+                            for (int j = 0; j < properties.Count; j++)
+                            {
+                                string field = properties[j].Attributes["Name"].Value;
+                                typeData.Fields.Add(field);
+                            }
+                        }
+
+                        if (withNavPropertis)
+                        {
+                            var navPropNodes = typeNode.SelectNodes("edmx:NavigationProperty", nsmanager);
+                            for (int j = 0; j < navPropNodes.Count; j++)
+                            {
+                                var navProp = navPropNodes[j];
+                                string nav_name = navProp.Attributes["Name"].Value;
+                                string[] types = new string[] { navProp.Attributes["FromRole"].Value, navProp.Attributes["ToRole"].Value };
+
+                                string nav_type = string.Empty;
+                                for (int t = 0; t < types.Length; t++)
+                                {
+                                    var association = schemaNode.SelectSingleNode("edmx:Association/edmx:End[@Role = '" + types[t] + "']", nsmanager);
+                                    if (association != null)
+                                    {
+                                        nav_type = association.Attributes["Type"].Value;
+                                        if (nav_type != typeName || t == 1)
+                                            break;
+                                    }
+                                }
+
+                                if (allowedTypeNames.Contains(nav_type))
+                                {
+                                    typeData.Fields.Add(nav_name);
+                                }
                             }
                         }
                     }
