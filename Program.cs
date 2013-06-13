@@ -84,6 +84,9 @@ namespace JaySvcUtil
             [Option("N", "navigation", HelpText = "Model with navigation properties (default: true)")]
             public string Navigation = "true";
 
+            [Option("K", "generateKeys", HelpText = "Generate key fields of types when using typeFilter with explicit member projection (default: true)")]
+            public string GenerateKeys = "true";
+
             private void HandleParsingErrorsInHelp(HelpText help)
             {
                 string errors = help.RenderParsingErrorsText(this);
@@ -357,11 +360,11 @@ namespace JaySvcUtil
                 List<TypeData> discoveredData = null;
                 if (options.DependentRelationsOnly)
                 {
-                    discoveredData = DiscoverProperyDependencies(types, doc, nsmanager, options.Navigation == "true");
+                    discoveredData = DiscoverProperyDependencies(types, doc, nsmanager, options.Navigation == "true", options.GenerateKeys == "true");
                 }
                 else
                 {
-                    discoveredData = DiscoverTypeDependencies(types, doc, nsmanager, options.Navigation == "true");
+                    discoveredData = DiscoverTypeDependencies(types, doc, nsmanager, options.Navigation == "true", options.GenerateKeys == "true");
                 }
 
                 var complex = doc.SelectNodes("//*[local-name() = 'ComplexType']");
@@ -464,7 +467,7 @@ namespace JaySvcUtil
        
         }
 
-        static List<TypeData> DiscoverTypeDependencies(List<TypeData> types, XmlDocument doc, XmlNamespaceManager nsmanager, bool withNavPropertis)
+        static List<TypeData> DiscoverTypeDependencies(List<TypeData> types, XmlDocument doc, XmlNamespaceManager nsmanager, bool withNavPropertis, bool withKeys)
         {
             List<TypeData> allowedTypes = new List<TypeData>();
             List<string> allowedTypeNames = new List<string>();
@@ -473,17 +476,17 @@ namespace JaySvcUtil
             for (int i = 0; i < types.Count; i++)
             {
                 collect.Remove(types[i].Name);
-                discoverType(types[i], doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, true, collect);
+                discoverType(types[i], doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, withKeys, true, collect);
             }
 
             for (int i = 0; i < collect.Count; i++)
             {
-                discoverType(new TypeData(collect[i]), doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, false, new List<string>());
+                discoverType(new TypeData(collect[i]), doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, withKeys, false, new List<string>());
             }
 
             return allowedTypes;
         }
-        static void discoverType(TypeData typeData, XmlDocument doc, XmlNamespaceManager nsmanager, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool collectTypes, List<string> collectedTypes)
+        static void discoverType(TypeData typeData, XmlDocument doc, XmlNamespaceManager nsmanager, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool withKeys, bool collectTypes, List<string> collectedTypes)
         {
             string typeName = typeData.Name;
 
@@ -510,7 +513,7 @@ namespace JaySvcUtil
                     allowedTypes.Add(typeData);
                     allowedTypeNames.Add(typeName);
 
-                    /*if (typeData.Fields.Count > 0) {
+                    if (withKeys && typeData.Fields.Count > 0) {
                         var keys = typeNode.SelectNodes("edmx:Key/edmx:PropertyRef", nsmanager);
                         if (keys != null)
                         {
@@ -521,7 +524,7 @@ namespace JaySvcUtil
                                     typeData.Fields.Insert(j, keyField);
                             }
                         }
-                    }*/
+                    }
 
                     if (withNavPropertis)
                     {
@@ -552,7 +555,7 @@ namespace JaySvcUtil
                                     }
                                     else
                                     {
-                                        discoverType(new TypeData(nav_type), doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, false, collectedTypes);
+                                        discoverType(new TypeData(nav_type), doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, withKeys, false, collectedTypes);
                                     }
                                 }
                                 //else
@@ -567,20 +570,19 @@ namespace JaySvcUtil
         }
 
 
-        static List<TypeData> DiscoverProperyDependencies(List<TypeData> types, XmlDocument doc, XmlNamespaceManager nsmanager, bool withNavPropertis)
+        static List<TypeData> DiscoverProperyDependencies(List<TypeData> types, XmlDocument doc, XmlNamespaceManager nsmanager, bool withNavPropertis, bool withKeys)
         {
             List<TypeData> allowedTypes = new List<TypeData>();
             List<string> allowedTypeNames = types.Select(t => t.Name).ToList();
-            List<string> collect = new List<string>();
 
             for (int i = 0; i < types.Count; i++)
             {
-                discoverProperties(types[i], doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, true, collect);
+                discoverProperties(types[i], doc, nsmanager, allowedTypes, allowedTypeNames, withNavPropertis, withKeys);
             }
 
             return allowedTypes;
         }
-        static void discoverProperties(TypeData typeData, XmlDocument doc, XmlNamespaceManager nsmanager, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool collectTypes, List<string> collectedTypes)
+        static void discoverProperties(TypeData typeData, XmlDocument doc, XmlNamespaceManager nsmanager, List<TypeData> allowedTypes, List<string> allowedTypeNames, bool withNavPropertis, bool withKeys)
         {
             string typeName = typeData.Name;
             Console.WriteLine("Discover: " + typeName);
@@ -639,6 +641,19 @@ namespace JaySvcUtil
                                 {
                                     typeData.Fields.Add(nav_name);
                                 }
+                            }
+                        }
+                    }
+                    else if (withKeys)
+                    {
+                        var keys = typeNode.SelectNodes("edmx:Key/edmx:PropertyRef", nsmanager);
+                        if (keys != null)
+                        {
+                            for (int j = 0; j < keys.Count; j++)
+                            {
+                                string keyField = keys[j].Attributes["Name"].Value;
+                                if (!typeData.Fields.Contains(keyField))
+                                    typeData.Fields.Insert(j, keyField);
                             }
                         }
                     }
