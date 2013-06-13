@@ -435,6 +435,8 @@ namespace JaySvcUtil
             var reader = XmlReader.Create(documentStream);
             xslt.Transform(reader, xslArg, outputStream);
 
+            return;
+
             Console.WriteLine("Generating TypeScript document");
 
             XslCompiledTransform xsltTS = new XslCompiledTransform(Debugger.IsAttached);

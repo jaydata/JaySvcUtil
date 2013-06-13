@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<TypeFilterConfig>
+  <Type Name="Microsoft.Crm.Sdk.Data.Services.Lead"></Type>
+  <Type Name="Microsoft.Crm.Sdk.Data.Services.Product"></Type>
+  <!--<Type Name="Microsoft.Crm.Sdk.Data.Services.Lead"></Type>-->
+</TypeFilterConfig>
+
