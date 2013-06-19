@@ -231,8 +231,8 @@ namespace JaySvcUtil
 
         public static Dictionary<string, string> maxNamespaceVersions = new Dictionary<string, string>
         {
-            {"http://schemas.microsoft.com/ado/2007/05/edm", "1.0" },
-            {"http://schemas.microsoft.com/ado/2006/04/edm", "1.0" },
+            {"http://schemas.microsoft.com/ado/2007/05/edm", "2.0" },
+            {"http://schemas.microsoft.com/ado/2006/04/edm", "2.0" },
             {"http://schemas.microsoft.com/ado/2008/09/edm", "2.0" },
             {"http://schemas.microsoft.com/ado/2009/08/edm", "2.0" },
             {"http://schemas.microsoft.com/ado/2009/11/edm", "3.0" }
