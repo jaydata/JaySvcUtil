@@ -28,7 +28,7 @@
   <xsl:param name="AllowedTypesListX">Microsoft.Crm.Sdk.Data.Services.Product;Microsoft.Crm.Sdk.Data.Services.LeadAddress:Telephone1,City,UTCOffset;</xsl:param>
 
   <xsl:variable name="EdmJayTypeMapping">
-    <map from="Edm.Boolean" to="bool" />
+    <map from="Edm.Boolean" to="boolean" />
     <map from="Edm.Binary" to="Uint8Array" />
     <map from="Edm.DateTime" to="Date" />
     <map from="Edm.DateTimeOffset" to="Date" />
