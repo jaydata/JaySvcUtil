@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -62,11 +62,11 @@ namespace JaySvcUtil
 
             [Option("p", "password", HelpText = "The network password for an authenticated OData service")]
             public string Password = string.Empty;
-            
+
             [Option("d", "domain", HelpText = "The network domain for an authenticated OData service")]
             public string Domain = string.Empty;
 
-            [Option("v", "protocolVersion", HelpText="The OData version of the service: V1, V2 or V3. Autodetect if missing")]
+            [Option("v", "protocolVersion", HelpText = "The OData version of the service: V1, V2 or V3. Autodetect if missing")]
             public string ODataVersion = "";
 
             [Option("d", "maxDataServiceVersion", HelpText = "The OData MaxDataServiceVersion of the service: 1.0, 2.0 or 3.0. Autodetect if missing")]
@@ -86,6 +86,9 @@ namespace JaySvcUtil
 
             [Option("K", "generateKeys", HelpText = "Generate key fields of types when using typeFilter with explicit member projection (default: true)")]
             public string GenerateKeys = "true";
+
+            [Option("h", "requestHeaders", HelpText = "The http headers to send along to the $metadata definition request. (example: \"content-type:application\\json;apikey:test\")")]
+            public string RequestHeaders = "";
 
             private void HandleParsingErrorsInHelp(HelpText help)
             {
@@ -128,7 +131,7 @@ namespace JaySvcUtil
                 return MetadataUri.Trim().Replace("/$metadata", "");
             }
 
-            public bool  GetAutoCreateContext() { return AutoCreateContext; }
+            public bool GetAutoCreateContext() { return AutoCreateContext; }
 
             public string GetContextInstanceName() { return ContextInstanceName; }
         }
@@ -164,14 +167,14 @@ namespace JaySvcUtil
                 string master = sr.ReadToEnd();
 
                 master = master.Replace("xmlns:edm=\"@@VERSIONNS@@\"", "xmlns:edm=\"" + metaNamespace + "\"");
-                if(NamespaceVersions.Keys.Contains(metaNamespace))
+                if (NamespaceVersions.Keys.Contains(metaNamespace))
                     master = master.Replace("@@VERSION@@", NamespaceVersions[metaNamespace]);
                 else
                     master = master.Replace("@@VERSION@@", "Unknown");
 
                 return new XPathDocument(new StringReader(master));
             }
-            
+
             //if (File.Exists(filename))
             //{
             //    return new XPathDocument(File.OpenText(filename));
@@ -190,9 +193,11 @@ namespace JaySvcUtil
         {
             var filename = typeScript != true ? stylesheet : stylesheetTS;
             var latestXslt = String.Empty;
-            
-            if (File.Exists(filename)) {
-                using (var sr = File.OpenText(filename)) {
+
+            if (File.Exists(filename))
+            {
+                using (var sr = File.OpenText(filename))
+                {
                     latestXslt = sr.ReadToEnd();
                     //string master = sr.ReadToEnd();
                     //if (master.Contains("xmlns:edm=\"" + metaNamespace + "\"")) {
@@ -214,13 +219,13 @@ namespace JaySvcUtil
                 else
                     master = master.Replace("@@VERSION@@", "Unknown");
 
-                if(latestXslt != master)
+                if (latestXslt != master)
                     File.WriteAllText(filename, master);
             }
         }
 
         //http://schemas.microsoft.com/ado/2007/05/edm <-- i found this somewhere --> sharepoint
-        public static Dictionary<string, string> NamespaceVersions  = new Dictionary<string,string>
+        public static Dictionary<string, string> NamespaceVersions = new Dictionary<string, string>
         {
             {"http://schemas.microsoft.com/ado/2007/05/edm", "V1.1" },
             {"http://schemas.microsoft.com/ado/2006/04/edm", " V1 " },
@@ -246,8 +251,8 @@ namespace JaySvcUtil
                 Environment.Exit(1);
 
 
-            
             Console.Write("Requesting: " + options.MetadataUri + "...");
+
 
             MemoryStream documentStream = new MemoryStream();
             if (options.MetadataUri.StartsWith("http"))
@@ -255,6 +260,7 @@ namespace JaySvcUtil
                 var r = new System.Net.WebClient();
                 var req = (HttpWebRequest)HttpWebRequest.Create(options.MetadataUri.Trim());
                 req.UserAgent = "JaySvcUtil.exe";
+
 
                 //req.Credentials = cred;
                 req.PreAuthenticate = true;
@@ -267,6 +273,17 @@ namespace JaySvcUtil
                 {
                     req.Credentials = CredentialCache.DefaultCredentials;
                 }
+
+                if (options.RequestHeaders != "")
+                {
+                    var headers = options.RequestHeaders.Split(';');
+                    foreach (string header in headers)
+                    {
+                        var h = header.Split(':');
+                        req.Headers.Set(h[0], h.Length > 1 ? h[1] : "");
+                    }
+                }
+
                 var res = req.GetResponse();
                 var resStream = res.GetResponseStream();
                 resStream.CopyTo(documentStream);
@@ -281,8 +298,8 @@ namespace JaySvcUtil
             }
             //var metadata = r.DownloadString(options.MetadataUri.Trim());
             Console.WriteLine(" done.");
-          //// Compile the style sheet.
-          //// Execute the XSLT transform.
+            //// Compile the style sheet.
+            //// Execute the XSLT transform.
             FileStream outputStream = new FileStream(options.OutputFileName, FileMode.Create);
             //MemoryStream ms = new MemoryStream(Encoding.UTF8.GetBytes(metadata));
             XmlDocument doc = new XmlDocument();
@@ -297,7 +314,8 @@ namespace JaySvcUtil
 
             string metadataTypes = options.TypeFilter;
 
-            if (metadataTypes == string.Empty && options.TypeFilterConfig != string.Empty) {
+            if (metadataTypes == string.Empty && options.TypeFilterConfig != string.Empty)
+            {
                 MemoryStream configStream = new MemoryStream();
                 File.OpenRead(options.TypeFilterConfig).CopyTo(configStream);
                 configStream.Position = 0;
@@ -327,11 +345,12 @@ namespace JaySvcUtil
                 XmlNamespaceManager nsmanager = new XmlNamespaceManager(doc.NameTable);
                 nsmanager.AddNamespace("edmx", ns);
 
-                List<string> datas = metadataTypes.Split(new char[]{';'}, StringSplitOptions.RemoveEmptyEntries).ToList();
+                List<string> datas = metadataTypes.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList();
                 List<TypeData> types = new List<TypeData>();
                 for (int i = 0; i < datas.Count; i++)
                 {
-                    if (datas[i] != String.Empty) {
+                    if (datas[i] != String.Empty)
+                    {
                         TypeData typeData = new TypeData(datas[i]);
                         string typeShortName = typeData.Name;
                         string containerName = string.Empty;
@@ -353,7 +372,7 @@ namespace JaySvcUtil
 
                         }
                         types.Add(typeData);
-                        
+
                     }
                 }
 
@@ -379,10 +398,12 @@ namespace JaySvcUtil
                 for (int i = 0; i < discoveredData.Count; i++)
                 {
                     TypeData row = discoveredData[i];
-                    if (row.Fields.Count > 0) {
+                    if (row.Fields.Count > 0)
+                    {
                         result += row.Name + ":" + string.Join(",", row.Fields) + ";";
                     }
-                    else {
+                    else
+                    {
                         result += row.Name + ";";
                     }
                 }
@@ -392,14 +413,14 @@ namespace JaySvcUtil
 
             //if (string.IsNullOrWhiteSpace(options.ODataVersion))
             //{
-                options.ODataVersion = NamespaceVersions.Keys.Contains(ns) ? NamespaceVersions[ns] : "Unknown";
+            options.ODataVersion = NamespaceVersions.Keys.Contains(ns) ? NamespaceVersions[ns] : "Unknown";
 
-                if (version != String.Empty)
-                    options.ODataMaxDataServiceVersion = version;
-                else
-                    options.ODataMaxDataServiceVersion = maxNamespaceVersions.Keys.Contains(ns) ? maxNamespaceVersions[ns] : "3.0";
+            if (version != String.Empty)
+                options.ODataMaxDataServiceVersion = version;
+            else
+                options.ODataMaxDataServiceVersion = maxNamespaceVersions.Keys.Contains(ns) ? maxNamespaceVersions[ns] : "3.0";
             //}
-           
+
 
             XslCompiledTransform xslt = new XslCompiledTransform(Debugger.IsAttached);
             if (Debugger.IsAttached)
@@ -416,10 +437,12 @@ namespace JaySvcUtil
             var xslArg = new XsltArgumentList();
 
             int metaIdx = options.MetadataUri.LastIndexOf("$metadata");
-            if (metaIdx > 0) {
+            if (metaIdx > 0)
+            {
                 xslArg.AddParam("SerivceUri", "", options.MetadataUri.Substring(0, options.MetadataUri.LastIndexOf("$metadata") - 1));
             }
-            else {
+            else
+            {
                 xslArg.AddParam("SerivceUri", "", "");
                 options.AutoCreateContext = false;
             }
@@ -460,9 +483,9 @@ namespace JaySvcUtil
 
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            
+
             Console.WriteLine("Error:" + ((Exception)e.ExceptionObject).Message);
-       
+
         }
 
         static List<TypeData> DiscoverTypeDependencies(List<TypeData> types, XmlDocument doc, XmlNamespaceManager nsmanager, bool withNavPropertis, bool withKeys)
@@ -511,7 +534,8 @@ namespace JaySvcUtil
                     allowedTypes.Add(typeData);
                     allowedTypeNames.Add(typeName);
 
-                    if (withKeys && typeData.Fields.Count > 0) {
+                    if (withKeys && typeData.Fields.Count > 0)
+                    {
                         var keys = typeNode.SelectNodes("edmx:Key/edmx:PropertyRef", nsmanager);
                         if (keys != null)
                         {
@@ -660,16 +684,18 @@ namespace JaySvcUtil
         }
     }
 
-    public class TypeData {
+    public class TypeData
+    {
         public TypeData(string data)
         {
             if (data.Contains(':'))
             {
-                string[] parts = data.Split(new char[]{':'}, StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = data.Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
                 Name = parts[0];
                 Fields = parts[1].Split(',').ToList();
             }
-            else {
+            else
+            {
                 Name = data;
                 Fields = new List<string>();
             }
@@ -678,7 +704,8 @@ namespace JaySvcUtil
         public string Name { get; set; }
         public List<string> Fields { get; set; }
 
-        public bool isUsed(string field) {
+        public bool isUsed(string field)
+        {
             return this.Fields.Count() == 0 || this.Fields.Contains(field);
         }
 
