@@ -226,7 +226,8 @@ namespace JaySvcUtil
             {"http://schemas.microsoft.com/ado/2006/04/edm", " V1 " },
             {"http://schemas.microsoft.com/ado/2008/09/edm", " V2 " },
             {"http://schemas.microsoft.com/ado/2009/08/edm", "V2.1" },
-            {"http://schemas.microsoft.com/ado/2009/11/edm", " V3 " }
+            {"http://schemas.microsoft.com/ado/2009/11/edm", " V3 " },
+            {"http://docs.oasis-open.org/odata/ns/edm", " V4 " }
         };
 
         public static Dictionary<string, string> maxNamespaceVersions = new Dictionary<string, string>
@@ -235,7 +236,8 @@ namespace JaySvcUtil
             {"http://schemas.microsoft.com/ado/2006/04/edm", "2.0" },
             {"http://schemas.microsoft.com/ado/2008/09/edm", "2.0" },
             {"http://schemas.microsoft.com/ado/2009/08/edm", "2.0" },
-            {"http://schemas.microsoft.com/ado/2009/11/edm", "3.0" }
+            {"http://schemas.microsoft.com/ado/2009/11/edm", "3.0" },
+            {"http://docs.oasis-open.org/odata/ns/edm", "4.0" }
         };
 
         static void Main(string[] args)

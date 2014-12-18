@@ -433,6 +433,7 @@
     <xsl:variable name="memberDefinition">
       <xsl:if test="parent::edm:EntityType/edm:Key/edm:PropertyRef[@Name = current()/@Name]"><attribute name="key">true</attribute></xsl:if>
       <xsl:apply-templates select="@*[local-name() != 'Name']" mode="render-field" />
+      <xsl:if test="local-name() = 'NavigationProperty' and current()[not(@Partner) and current()/@Type]"><attribute name="inverseProperty">'$$unbound'</attribute></xsl:if>
     </xsl:variable>'<xsl:value-of select="@Name"/>': { <xsl:choose><xsl:when test="function-available('msxsl:node-set')"><xsl:for-each select="msxsl:node-set($memberDefinition)/*">'<xsl:if test="@extended = 'true'">$</xsl:if><xsl:value-of select="@name"/>':<xsl:value-of select="."/>
       <xsl:if test="position() != last()">,<xsl:text> </xsl:text>
     </xsl:if> </xsl:for-each></xsl:when>
@@ -443,6 +444,10 @@
 </xsl:template>
   
   <xsl:template match="@Name" mode="render-field">
+  </xsl:template>
+
+  <xsl:template match="@Partner" mode="render-field">
+    <attribute name="inverseProperty">'<xsl:value-of select="."/>'</attribute>
   </xsl:template>
 
   <xsl:template match="@Type" mode="render-field">
