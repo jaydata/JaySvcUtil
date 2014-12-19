@@ -1,4 +1,4 @@
-﻿<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
                 xmlns:edm="@@VERSIONNS@@" 
                 xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" 
                 xmlns:metadata="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata" 
@@ -306,10 +306,10 @@ declare module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
 
 <xsl:for-each select="edm:EntityContainer">
   <xsl:text xml:space="preserve">  </xsl:text>export class <xsl:value-of select="@Name" /> extends <xsl:value-of select="$ContextBaseClass"  /> {
-    onReady(): $data.IPromise;
-    onReady(handler: (context: <xsl:value-of select="@Name"/>) => void): $data.IPromise;
-    
-    <xsl:variable name="subset">
+    onReady(): $data.IPromise&lt;any&gt;;
+    onReady(handler: (context: <xsl:value-of select="@Name"/>) => void): $data.IPromise&lt;any&gt;;
+
+<xsl:variable name="subset">
     <xsl:for-each select="edm:EntitySet | edm:FunctionImport">
       <xsl:choose>
         <xsl:when test="function-available('msxsl:node-set')">
@@ -443,7 +443,7 @@ declare module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
           </xsl:for-each>
           <xsl:text>handler: (</xsl:text>
           <xsl:apply-templates select="." mode="render-return-config" />
-          <xsl:text>) => void): $data.IPromise;</xsl:text>
+          <xsl:text>) => void): $data.IPromise&lt;any&gt;;</xsl:text>
 
           <xsl:if test="count(edm:Parameter) > $skipParam">
           <xsl:text>
@@ -453,12 +453,12 @@ declare module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
           </xsl:for-each>
           <xsl:text>}, handler: (</xsl:text>
           <xsl:apply-templates select="." mode="render-return-config" />
-          <xsl:text>) => void): $data.IPromise;</xsl:text>
+          <xsl:text>) => void): $data.IPromise&lt;any&gt;;</xsl:text>
           
           <xsl:text>
       (handler: (</xsl:text>
           <xsl:apply-templates select="." mode="render-return-config" />
-          <xsl:text>) => void): $data.IPromise;</xsl:text>
+          <xsl:text>) => void): $data.IPromise&lt;any&gt;;</xsl:text>
         </xsl:if>
         
         <!--<xsl:text>}</xsl:text>-->
@@ -471,7 +471,7 @@ declare module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
         </xsl:for-each>
         <xsl:text>handler?: (</xsl:text>
         <xsl:apply-templates select="." mode="render-return-config" />
-        <xsl:text>) => void): $data.IPromise;</xsl:text>
+        <xsl:text>) => void): $data.IPromise&lt;any&gt;;</xsl:text>
         
         <xsl:if test="count(edm:Parameter) > $skipParam">
         <xsl:text>
@@ -481,7 +481,7 @@ declare module <xsl:value-of select="concat($DefaultNamespace,@Namespace)"/> {
         </xsl:for-each>
         <xsl:text>}, handler?: (</xsl:text>
         <xsl:apply-templates select="." mode="render-return-config" />
-        <xsl:text>) => void): $data.IPromise;</xsl:text>
+        <xsl:text>) => void): $data.IPromise&lt;any&gt;;</xsl:text>
         </xsl:if>
         
       </xsl:otherwise>
